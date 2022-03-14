@@ -74,6 +74,8 @@
 #define SPI_0_DEVICE_ID			XPAR_XSPIPS_0_DEVICE_ID
 #define SPI_1_DEVICE_ID			XPAR_XSPIPS_1_DEVICE_ID
 
+#define SP1_1_COUNT_STRING        "The number of characters received over SPI: %d\n"
+
 /************************* Task Function definitions *************************/
 static void TaskUartManager( void *pvParameters );
 static TaskHandle_t xTask_uart;
@@ -258,13 +260,17 @@ static void TaskSpi0Master( void *pvParameters ){
 			//You want to transfer the bytes based on the TRANSFER_SIZE_IN_BYTES value.
 			//You can use the write function for MasterSPI (from the driver file) for that and then you want to use task_YIELD() that allows the slave SPI task to work.
 			//Finally, you want to use the read from master implementation using the function from the driver file provided. Then send the data to the back of the FIFO2 and reset the "bytecount" variable to zero.
-			
-			bytecount++;
-			if(bytecount==TRANSFER_SIZE_IN_BYTES){
-				
-				
-				
-			}
+			xil_printf("received %c\n", task2_receive_from_FIFO1);
+//			send_buffer[bytecount] = task2_receive_from_FIFO1;
+//			bytecount++;
+//			if(bytecount==TRANSFER_SIZE_IN_BYTES){
+//				xil_printf("sending %c", *send_buffer);
+//				SpiMasterWrite(send_buffer, TRANSFER_SIZE_IN_BYTES);
+//				taskYIELD();
+//				send_SPI_data_via_FIFO2 = SpiMasterRead(TRANSFER_SIZE_IN_BYTES);
+//				xQueueSendToBack(xQueue_FIFO2,&send_SPI_data_via_FIFO2,0UL);
+//				bytecount = 0;
+//			}
 			/*******************************************/
 
 		}
@@ -292,7 +298,26 @@ static void TaskSpi1Slave( void *pvParameters ){
 		//Once \r#\r is detected you want to now send the message string and you may use a looping method to send it to the SPI master.
 
 		if(spi_master_loopback_en==0 && current_command_execution_flag==2){
-		
+			SpiSlaveRead(TRANSFER_SIZE_IN_BYTES);
+			temp_store = *RxBuffer_Slave;
+
+			num_received++;
+
+			if (((end_sequence_flag == 0 || end_sequence_flag == 2) && temp_store == CHAR_CARRIAGE_RETURN) ||
+					(end_sequence_flag == 1 && temp_store == CHAR_POUND_HASH)) {
+				end_sequence_flag++;
+			} else {
+				end_sequence_flag = 0;
+			}
+
+			SpiSlaveWrite(&temp_store, TRANSFER_SIZE_IN_BYTES);
+
+			if (end_sequence_flag == 3) {
+//				sprintf(buffer, SP1_1_COUNT_STRING, num_received);
+//				SpiSlaveWrite(&temp_store, 48);
+				num_received = 0;
+				end_sequence_flag = 0;
+			}
 
 		}
 		/*******************************************/

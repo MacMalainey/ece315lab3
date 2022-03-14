@@ -9,6 +9,7 @@ BEGIN OS
  PARAMETER SYSINTC_SPEC = *
  PARAMETER SYSTMR_DEV = *
  PARAMETER SYSTMR_SPEC = true
+ PARAMETER generate_runtime_stats = 1
  PARAMETER stdin = ps7_uart_1
  PARAMETER stdout = ps7_uart_1
 END

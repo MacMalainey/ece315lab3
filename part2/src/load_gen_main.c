@@ -48,7 +48,7 @@ static TaskHandle_t xTask_loop_count_processor_task_handle;
 
 /************************* Global Variables *********************************/
 
-u32 loop_count = 0;  //GLOBAL variable for loop_count to generate a fake CPU load
+u32 loop_count = 25000;  //GLOBAL variable for loop_count to generate a fake CPU load
 u32 run;
 
 int main(void)
@@ -102,19 +102,20 @@ static void TaskLoopCountProcessor(void *pvParameters){
 		if(loop_count >= 500000){
 			/**************************************************/
 			//update the "delay" variable here to provide the delay of 90000
+			delay = pdMS_TO_TICKS(90000);
 
 			/**************************************************/
 		}
 		if(loop_count >= 1000000){
 			/**************************************************/
 			//update the "delay" variable here to provide the delay of 120000
-
+			delay = pdMS_TO_TICKS(120000);
 			/**************************************************/
 		}
 
 		/**************************************************/
 		//write a line of code that increments the "loop_count" variable by 25000/50000
-
+		loop_count += 25000;
 		/**************************************************/
 		run = 0;
 		xil_printf("\n\nCurrent loop count value = %d\n\n", loop_count);
@@ -137,6 +138,9 @@ static void TaskCpuLoadGen( void *pvParameters ){
 		* Setup a for loop where this task is executing a simple bitwise complement operation for "loop_count" number of times on the variable "var"
 		*/
 		/*************************************************/
+		for (u32 i = 0; i < loop_count; i++) {
+			var = !var;
+		}
 		vTaskDelay(1);
 	}
 }
@@ -146,6 +150,7 @@ static void TaskPrintRunTimeStats( void *pvParameters )
 {
 
 	const TickType_t delay = pdMS_TO_TICKS(4000);
+	char buffer[200];
 
 	while(1){
 		xil_printf( "\nPrinting run time stats (loop count = %d)", loop_count);
@@ -157,6 +162,8 @@ static void TaskPrintRunTimeStats( void *pvParameters )
 		* Declare the output variable that you want to use with the vTaskGetRunTimeStats() function
 		*/
 		/*************************************************/
+		vTaskGetRunTimeStats(buffer);
+		xil_printf(buffer);
 		run ++;
 		vTaskDelay(delay);
 	}
