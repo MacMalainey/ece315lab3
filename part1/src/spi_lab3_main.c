@@ -110,7 +110,7 @@ u32 flag=0; 							//to enables sending dummy char in SPI0-SPI1 mode
 u32 current_command_execution_flag=0;
 u32 end_seq;
 
-int str_length; 						// length of number of bytes string and the cpu statistics table
+int str_length = 48; 						// length of number of bytes string and the cpu statistics table
 
 extern XSpiPs Spi_0_Instance_MASTER;
 extern XSpiPs Spi_1_Instance_SLAVE;
@@ -188,8 +188,8 @@ static void TaskUartManager( void *pvParameters ){
 				//write the logic to send the "dummy" control character using the FIFO1
 				//Also wait on to receive the bytes coming from the SPIMaster task via FIFO2
 				//If there is space on the Transmitter UART side, send it to the UART using an appropriate UART write function.
-
-
+				RecvChar = dummy;
+				executeSpiMasterCommand();
 				/*******************************************/
 			}
 			flag=0;
@@ -260,17 +260,15 @@ static void TaskSpi0Master( void *pvParameters ){
 			//You want to transfer the bytes based on the TRANSFER_SIZE_IN_BYTES value.
 			//You can use the write function for MasterSPI (from the driver file) for that and then you want to use task_YIELD() that allows the slave SPI task to work.
 			//Finally, you want to use the read from master implementation using the function from the driver file provided. Then send the data to the back of the FIFO2 and reset the "bytecount" variable to zero.
-			xil_printf("received %c\n", task2_receive_from_FIFO1);
-//			send_buffer[bytecount] = task2_receive_from_FIFO1;
-//			bytecount++;
-//			if(bytecount==TRANSFER_SIZE_IN_BYTES){
-//				xil_printf("sending %c", *send_buffer);
-//				SpiMasterWrite(send_buffer, TRANSFER_SIZE_IN_BYTES);
-//				taskYIELD();
-//				send_SPI_data_via_FIFO2 = SpiMasterRead(TRANSFER_SIZE_IN_BYTES);
-//				xQueueSendToBack(xQueue_FIFO2,&send_SPI_data_via_FIFO2,0UL);
-//				bytecount = 0;
-//			}
+			send_buffer[bytecount] = task2_receive_from_FIFO1;
+			bytecount++;
+			if(bytecount==TRANSFER_SIZE_IN_BYTES){
+				SpiMasterWrite(send_buffer, TRANSFER_SIZE_IN_BYTES);
+				taskYIELD();
+				send_SPI_data_via_FIFO2 = SpiMasterRead(TRANSFER_SIZE_IN_BYTES);
+				xQueueSendToBack(xQueue_FIFO2,&send_SPI_data_via_FIFO2,0UL);
+				bytecount = 0;
+			}
 			/*******************************************/
 
 		}
@@ -301,22 +299,25 @@ static void TaskSpi1Slave( void *pvParameters ){
 			SpiSlaveRead(TRANSFER_SIZE_IN_BYTES);
 			temp_store = *RxBuffer_Slave;
 
-			num_received++;
+			if (temp_store != DOLLAR) {
+				num_received++;
 
-			if (((end_sequence_flag == 0 || end_sequence_flag == 2) && temp_store == CHAR_CARRIAGE_RETURN) ||
-					(end_sequence_flag == 1 && temp_store == CHAR_POUND_HASH)) {
-				end_sequence_flag++;
-			} else {
-				end_sequence_flag = 0;
-			}
+				if (((end_sequence_flag == 0 || end_sequence_flag == 2) && temp_store == CHAR_CARRIAGE_RETURN) ||
+						(end_sequence_flag == 1 && temp_store == CHAR_POUND_HASH)) {
+					end_sequence_flag++;
+				} else {
+					end_sequence_flag = 0;
+				}
 
-			SpiSlaveWrite(&temp_store, TRANSFER_SIZE_IN_BYTES);
+				SpiSlaveWrite(&temp_store, TRANSFER_SIZE_IN_BYTES);
 
-			if (end_sequence_flag == 3) {
-//				sprintf(buffer, SP1_1_COUNT_STRING, num_received);
-//				SpiSlaveWrite(&temp_store, 48);
-				num_received = 0;
-				end_sequence_flag = 0;
+				if (end_sequence_flag == 3) {
+					sprintf(buffer, SP1_1_COUNT_STRING, num_received);
+					flag = 1;
+					SpiSlaveWrite(buffer, 48);
+					num_received = 0;
+					end_sequence_flag = 0;
+				}
 			}
 
 		}
