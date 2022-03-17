@@ -314,7 +314,9 @@ static void TaskSpi1Slave( void *pvParameters ){
 				if (end_sequence_flag == 3) {
 					sprintf(buffer, SP1_1_COUNT_STRING, num_received);
 					flag = 1;
-					SpiSlaveWrite(buffer, 48);
+					for (int i = 0; i < str_length; i++) {
+						SpiSlaveWrite((u8*) (buffer + i), TRANSFER_SIZE_IN_BYTES);
+					}
 					num_received = 0;
 					end_sequence_flag = 0;
 				}
